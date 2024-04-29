@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package v1_brokerjwt;
+
+option go_package = "./api/v1/brokerjwt";
+
+service JwtokenManagement {
+	rpc IsJwtokenOK(Jwtoken) returns (IsJwtokenOKResponse);
+}
+
+message Jwtoken{
+	string jwt = 1;
+}
+
+message IsJwtokenOKResponse {
+    	bool is_ok = 1;
+    	int32 response_code = 2;
+    	string role = 3;
+	string svc = 4;
+	string scope = 5;    
+}

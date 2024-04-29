@@ -1,0 +1,290 @@
+version: '3'
+
+# to make sure the network is the same between docker-compose files(if not in the same dir)
+# sudo docker-compose -p asonrythme up
+
+services:
+  gateway:
+    build:
+      context: ../../gateway
+      dockerfile: ./gateway.dockerfile
+    image: asr/gateway:v0.0.1
+    ports:
+      - "80:80"
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+    volumes:
+    - ../../gateway/development/defaultDev.conf:/etc/nginx/conf.d/default.conf
+    - ../../gateway/development/nginx.conf:/etc/nginx/nginx.conf
+    - ../../external-storage/nginxGateway_logs:/nginxlogs
+      # - ./nginx/certificate:/etc/nginx/certs
+    depends_on:
+      auth_svc:
+        condition: service_healthy    
+      broker_svc:
+        condition: service_healthy    
+    networks:
+      - my_net
+          # frontend:
+          #condition: service_healthy
+  
+  mongo:
+    image: 'mongo:4.2.16-bionic'
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: oauth2
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - ../../external-storage/mongo/mongo-single/:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 30s
+      retries: 3
+    networks:
+      - my_net
+
+  redis:
+    image: 'redis:7.0.15-alpine'
+    ports:
+      - "6379:6379"
+    restart: always
+    volumes:
+      - ../../external-storage/redis/:/data
+      - ./confs/redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - ../../external-storage/redis_logs:/var/log/redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - my_net
+
+  auth_svc:
+    build:
+      context: ../../auth_svc
+      dockerfile: ./auth.dockerfile
+    image: asr/auth_svc:v0.0.1
+    restart: always
+    ports:
+      - "9096:9096"
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      GOENV: "development"
+      SERVICE_NAME: auth
+      MONGO_USERNAME: admin
+      MONGO_PASSWORD: password
+      MONGO_AUTH_DATABASE: oauth2
+      MONGO_CLUSTER: "false"
+      MONGO_REPLICASET: ""
+      JWT_ALGORITHM: "HS256"
+      JWT_USER_KEYID: "userkeyID"
+      JWT_USER_SECRETKEY: "usersecretkey"
+      JWT_SERVICE_KEYID: "servicekeyID"
+      JWT_SERVICE_SECRETKEY: "servicesecretkey"
+      CONFIG_FILE_PATH: "../configs" # the executable run in /app
+    volumes:
+      - ../../auth_svc/configs/v1/:/configs
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # test: ["CMD", "wget", "-q", "--spider", "http://localhost:9096/v1/health && exit 0"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9096/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - my_net
+ 
+  registry_svc:
+    build:
+      context: ../../registry_svc
+      dockerfile: ./registry.dockerfile
+    image: asr/registry_svc:v0.0.1
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      GOENV: development
+      AUTH_SVC_URL: "http://auth_svc:9096/v1"
+      AUTH_SVC_TOKEN_ENDPOINT: "http://auth_svc:9096/v1/oauth/token"
+      PATH_STORAGE: "/app"
+    deploy:
+      mode: replicated
+      replicas: 1
+        #    environment:
+    depends_on:
+      auth_svc:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:4000/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - my_net
+
+  broker_svc:
+    build:
+      context: ../../broker_svc
+      dockerfile: ./broker.dockerfile
+    image: asr/broker_svc:v0.0.1
+    restart: always
+    ports:
+      - "8080:8080"
+      - "50002:50002"
+    environment:
+      GOENV: development
+      GRPC_ADDRESS: brockerSvc.asonrythme
+      AUTH_SVC_URL: "http://auth_svc:9096/v1"
+      AUTH_SVC_TOKEN_ENDPOINT: "http://auth_svc:9096/v1/oauth/token"
+      CONFIG_FILE_PATH: "../../configs/broker" # the executable run in /app/bin
+      CONFIG_FILE_NAME: "config"
+      CONFIG_LOADER_PATH: "../../configs/loader" # the executable run in /app/bin
+      CONFIG_LOADER_FILENAME: "loaderConfig"
+    volumes:
+      - ../../broker_svc/loader/configs/:/configs/loader
+      - ../../broker_svc/broker/configs/v1/servicesAddr/:/configs/broker
+    deploy:
+      mode: replicated
+      replicas: 1
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      auth_svc:
+        condition: service_healthy
+      registry_svc:
+        condition: service_healthy
+    networks:
+      - my_net
+
+  order:
+    build:
+      context: ../../order
+      dockerfile: ./order.dockerfile
+    image: asr/order:v0.0.1
+    restart: always
+    ports:
+      - "50001:50001"
+    environment:
+      GOENV: development
+      GRPC_ADDRESS: order.asonrythme
+      AUTH_SVC_URL: "http://auth_svc:9096/v1"
+      AUTH_SVC_TOKEN_ENDPOINT: "http://auth_svc:9096/v1/oauth/token"
+      JWT_VALIDATION_ADDRESS: "broker_svc"
+      KAFKA_URL: "broker:29093"
+        # PATH_TO_TLS: "/app/configs/v1/certificates"
+    deploy:
+      mode: replicated
+      replicas: 1
+    depends_on:
+      auth_svc:
+        condition: service_healthy
+      registry_svc:
+        condition: service_healthy
+    networks:
+      - my_net
+
+networks:
+  my_net:
+    driver: bridge
+    name: my_net
+
+
+## ==========================================================================
+#version: '3.9'
+#
+## if mongo V4, at the first deploy, log into a node and run manually run this
+## rs.initiate( {
+## _id : "myReplicaSet",
+## members: [
+##   { _id: 0, host: "mongo1:27017", priority: 2 },
+##   { _id: 1, host: "mongo2:27017", priority: 1 },
+##   { _id: 2, host: "mongo3:27017", priority: 1 }
+## ]
+## })
+#
+## for linux, in /etc/hosts add 127.0.0.1 localhost mongo1 mongo2 mongo3 
+#
+## optional: for 2 secondary nodes
+## run this in case you log into a secondary node and want to access the collections
+## rs.secondaryOk()  
+#
+#services:
+#  mongo1:
+#    image: mongo:4.2
+#      # image: mongo:5
+#    hostname: mongo1
+#    ports:
+#      - "27017:27017"
+#    environment:
+#      MONGO_INITDB_DATABASE: oauth2
+#        # MONGO_INITDB_ROOT_USERNAME: admin
+#        # MONGO_INITDB_ROOT_PASSWORD: password
+#    volumes:
+#      - ./db-oauth/mongo1/:/data/db
+#    healthcheck:
+#      test: echo 'db.runCommand("ping").ok' | mongo localhost:27017/admin --quiet
+#      interval: 2s
+#      timeout: 3s
+#      retries: 5
+#    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "myReplicaSet" ]
+#
+#  mongo2:
+#    image: mongo:4.2
+#      # image: mongo:5
+#    hostname: mongo2
+#    ports:
+#      - "28017:27017"
+#    environment:
+#      MONGO_INITDB_DATABASE: oauth2
+#    volumes:
+#      - ./db-oauth/mongo2/:/data/db
+#    healthcheck:
+#      test: echo 'db.runCommand("ping").ok' | mongo localhost:27017/admin --quiet
+#      interval: 2s
+#      timeout: 3s
+#      retries: 5 
+#    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "myReplicaSet" ]
+#
+#  mongo3:
+#    image: mongo:4.2
+#      # image: mongo:5
+#    hostname: mongo3
+#    ports:
+#      - "29017:27017"
+#    environment:
+#      MONGO_INITDB_DATABASE: oauth2
+#    depends_on:
+#      mongo1:
+#        condition: service_healthy
+#      mongo2:
+#        condition: service_healthy
+#    volumes:
+#      - ./db-oauth/mongo3/:/data/db
+#      - ./scripts/init.js:/scripts/init.js
+#    entrypoint:
+#      - bash
+#      - "-c"
+#      - |
+#        /usr/bin/mongod --bind_ip_all --replSet myReplicaSet && 
+#        sleep 5 &&
+#        mongo --host mongo1:27017 /scripts/init.js
+
+
+
+       

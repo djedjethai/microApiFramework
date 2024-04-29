@@ -1,0 +1,40 @@
+localhost:
+  service_url: "127.0.0.1"
+  service_port: "4000"
+  api_key: "dev-api-key"
+  debug: false
+
+development:
+  service_url: "registry_svc"
+  service_port: "4000"
+  api_key: "dev-api-key"
+  debug: true
+
+staging:
+  service_url: "staging-db-url"
+  service_port: "4000"
+  api_key: "stag-api-key"
+  debug: false
+
+production:
+  service_url: "production-db-url"
+  service_port: "4000"
+  api_key: "prod-api-key"
+  debug: false
+
+loaderconfigconf:
+  version: "v1"
+  storage_path_config: "../broker/configs"
+  download_path_config: "/configs"
+  storage_path_grpc: "../broker/api"
+  download_path_grpc: "/grpc"
+  delay_between_req_retry: "5"
+  req_retry: "3"
+
+grpctypes:
+  order: order
+  brokerjwt: brokerjwt
+
+configfiles:
+  certificates: certificates
+

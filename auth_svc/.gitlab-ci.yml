@@ -1,0 +1,45 @@
+stages:
+  - build
+  - deploy
+
+auth-svc_build:
+  stage: build
+  script:
+    - echo "Building the auth service"
+    # Add your build commands here
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+      changes:
+      - 'auth-svc/**/*' 
+
+auth-svc_deploy:
+  stage: deploy
+  script:
+    - echo "Deploying the auth service"
+    # Add your deployment commands here
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+      changes:
+      - 'auth-svc/**/*' 
+
+# stages:
+#   - build
+#   - deploy
+# 
+# build:
+#   stage: build
+#   script:
+#     - echo "Building the auth service"
+#     # Add your build commands here
+#   rules:
+#     - changes:
+#       - 'internal/**/*' # ?? does not work...
+# 
+# deploy:
+#   stage: deploy
+#   script:
+#     - echo "Deploying the auth service"
+#     # Add your deployment commands here
+#   only:
+#     - main
+# 

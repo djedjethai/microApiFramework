@@ -1,0 +1,42 @@
+stages:
+  - build
+  - deploy
+
+registry-svc_build:
+  stage: build
+  script:
+    - echo "Building the registry service"
+    # Add your build commands here
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+      changes:
+      - 'registry-svc/**/*'
+
+registry-svc_deploy:
+  stage: deploy
+  script:
+    - echo "Deploying the registry service"
+    # Add your deployment commands here
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+      changes:
+      - 'registry-svc/**/*'
+
+
+# build:
+#   stage: build
+#   script:
+#     - echo "Building the registry service"
+#     # Add your build commands here
+#   rules:
+#     - changes:
+#       - 'registry-svc/**/*'
+# 
+# deploy:
+#   stage: deploy
+#   script:
+#     - echo "Deploying the registry service"
+#     # Add your deployment commands here
+#   only:
+#     - main
+

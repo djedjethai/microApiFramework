@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+import "google/protobuf/wrappers.proto";
+
+package v1_order;
+
+option go_package = "./api/v1/order";
+
+service OrderManagement {
+	rpc GetOrder(google.protobuf.StringValue) returns (Order);
+	rpc CreateOrder(Order) returns (google.protobuf.StringValue);
+}
+
+message Order{
+	string id = 1;
+	repeated LineItem lineItem = 2;
+	string shippingAddress = 3;
+}
+
+message LineItem{
+	string itemCode = 1;
+	float quantity = 2;
+}

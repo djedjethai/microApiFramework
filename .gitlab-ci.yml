@@ -1,0 +1,54 @@
+include:
+  - local: 'auth_svc/.gitlab-ci.yml'
+  - local: 'broker_svc/.gitlab-ci.yml'
+  - local: 'registry_svc/.gitlab-ci.yml'
+
+
+# stages:
+#   - build
+#   - deploy
+# 
+# auth-svc_build:
+#   stage: build
+#   script:
+#     - echo "Building the auth service"
+#     # Add your build commands here
+#   rules:
+#     - changes:
+#       - main
+#       - 'auth-svc/**/*' 
+# 
+# auth-svc_deploy:
+#   stage: deploy
+#   script:
+#     - echo "Deploying the auth service"
+#     # Add your deployment commands here
+#   rules:
+#     - changes:
+#       - main
+#       - 'auth-svc/**/*' 
+# 
+# 
+# registry-svc_build:
+#   stage: build
+#   script:
+#     - echo "Building the registry service"
+#     # Add your build commands here
+#   rules:
+#     - changes:
+#       - main
+#       - 'registry-svc/**/*'
+# 
+# registry-svc_deploy:
+#   stage: deploy
+#   script:
+#     - echo "Deploying the registry service"
+#     # Add your deployment commands here
+#   rules:
+#     - changes:
+#       - main
+#       - 'registry-svc/**/*'
+
+
+
+

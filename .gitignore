@@ -1,0 +1,26 @@
+auth_svc/bin
+auth_svc/vendor
+
+broker_svc/bin
+broker_svc/vendor
+broker_svc/broker/configs/v1
+
+external-storage
+
+# todelete --
+order/order/configs/v1
+order/bin
+order/vendor
+
+testObservability
+opentelemetry-go
+# -----
+
+registry_svc/bin
+registry_svc/configs/v1
+registry_svc/vendor
+
+infra/infrastructure/localhost/confs
+infra/infrastructure/development/confs
+
+common

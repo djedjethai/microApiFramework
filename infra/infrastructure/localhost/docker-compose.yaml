@@ -1,0 +1,181 @@
+version: '3.3'
+
+# to make sure the network is the same between docker-compose files(if not in the same dir)
+# sudo docker-compose -p asonrythme up
+
+services:
+  mongo:
+    image: 'mongo:4.2.16-bionic'
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: oauth2
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - ../../../external-storage/mongo/mongo-single/:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 30s
+      retries: 3
+
+      #  zookeeper:
+      #    image: confluentinc/cp-zookeeper:7.3.2
+      #    container_name: zookeeper
+      #    hostname: zookeeper
+      #    user: root
+      #    ports:
+      #      - "2181:2181"
+      #    environment:
+      #      ZOOKEEPER_SERVER_ID: 1
+      #      ZOOKEEPER_CLIENT_PORT: 2181
+      #      ZOOKEEPER_INIT_LIMIT: 5
+      #      ZOOKEEPER_SYNC_LIMIT: 2
+      #    volumes:
+      #      - ../../../external-storage/kafka/zk-data:/var/lib/zookeeper/data
+      #      - ../../../external-storage/kafka/zk-logs:/var/lib/zookeeper/log  
+      #    networks:
+      #      - my_net
+      #
+      #  broker:
+      #    # image: confluentinc/cp-server:7.0.1
+      #    image: confluentinc/cp-kafka:7.1.10
+      #    container_name: broker
+      #    hostname: broker
+      #    user: root
+      #    ports:
+      #      # - "9092:9092"
+      #      - "9093:9093"
+      #      - "29093:29093"
+      #    depends_on:
+      #      - zookeeper
+      #    environment:
+      #      KAFKA_BROKER_ID: 1
+      #      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      #        # that for the kfk controller to connect as there is only one brocker 
+      #        # it become the controller by default, so should connect to himeself, so localhost...
+      #        # KAFKA_ADVERTISED_LISTENERS: SSL://broker:9093 # then app on localhost can not connect
+      #        # works for app running on localhost but then SR can not connect.....
+      #        # KAFKA_ADVERTISED_LISTENERS: SSL://localhost:9093
+      #      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: |
+      #        SSL:SSL,SSL_PLAINTEXT:SSL
+      #      KAFKA_ADVERTISED_LISTENERS: |
+      #        SSL://broker:9093,SSL_PLAINTEXT://localhost:29093
+      #      KAFKA_SSL_KEYSTORE_FILENAME: broker.keystore.jks
+      #      KAFKA_SSL_KEYSTORE_CREDENTIALS: cert_creds
+      #      KAFKA_SSL_KEY_CREDENTIALS: cert_creds
+      #      KAFKA_SSL_TRUSTSTORE_FILENAME: broker.truststore.jks
+      #      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: cert_creds
+      #      KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: " "
+      #      KAFKA_SSL_CLIENT_AUTH: requested
+      #      KAFKA_SECURITY_PROTOCOL: SSL
+      #      KAFKA_SECURITY_INTER_BROKER_PROTOCOL: SSL
+      #      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      #      KAFKA_OPTS: "-Djavax.net.debug=ssl"
+      #        # healthcheck:
+      #        #   test: ["CMD", "bash", "-c", "echo -n | openssl s_client -connect localhost:9093 -tls1 -CAfile /etc/kafka/secrets/broker.cer.pem -cert /etc/kafka/secrets/producer-cer.pem -key /etc/kafka/secrets/producer-key.pem"]
+      #        #   interval: 30s
+      #        #   timeout: 10s
+      #        #   retries: 4
+      #    volumes:
+      #      - ./confs/kafka:/etc/kafka/secrets
+      #      - ../../../external-storage/kafka/kafka-data:/var/lib/kafka/data
+      #      - ../../../external-storage/kafka/kafka-log:/var/log/kafka
+      #    networks:
+      #      - my_net
+
+      # networks:
+      #   my_net:           
+      #     driver: bridge
+      #     name: my_net
+
+    # =========================================================================================
+      # DOES NOT COLLECT ANY DATA WITHIN LOCALHOST
+      #  # OpenTelemetry Collector
+      #  otel_collector:
+      #    image: otel/opentelemetry-collector-contrib:0.70.0
+      #    command: --config=/etc/otel-collector-config.yaml
+      #    volumes:
+      #      - ./confs/observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+      #      - ./confs/observability/server.crt:/etc/tls/server.crt
+      #      - ./confs/observability/server.key:/etc/tls/server.key
+      #      - ./confs/observability/rootCA.crt:/etc/tls/rootCA.crt
+      #      - ../../../external-storage/observability/otel-logs:/var/log
+      #    ports:
+      #      - "4317:4317" # OTLP over gRPC receiver
+      #      - "9464:9464" # Prometheus exporter
+      #    depends_on:
+      #      - jaeger
+      #      - prometheus
+      #    networks:
+      #      - my_net
+      # 
+      #  # Jaeger
+      #  jaeger:
+      #    image: jaegertracing/all-in-one:1.41.0
+      #    ports:
+      #      - "14250:14250" # Collector gRPC
+      #      - "16686:16686" # Web HTTP
+      #    networks:
+      #      - my_net
+      # 
+      #  # Prometheus
+      #  prometheus:
+      #    image: prom/prometheus:v2.42.0
+      #    command:
+      #      - --config.file=/etc/prometheus/prometheus-config.yaml
+      #    volumes:
+      #      - ./confs/observability/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
+      #    ports:
+      #      - "9090:9090"
+      #    networks:
+      #      - my_net
+
+
+
+
+      # SEE IF CAN ADD IT IN THE FUTUR
+        #  schemaregistry:
+        #    image: confluentinc/cp-schema-registry:7.1.0 
+        #    container_name: schema-registry
+        #    hostname: schema-registry
+        #    user: root
+        #    ports:
+        #      - "8081:8081"
+        #      - "8181:8181"
+        #    environment:
+        #      SCHEMA_REGISTRY_HOST_NAME: 'localhost'
+        #        # SCHEMA_REGISTRY_LISTENERS: 'http://localhost:8081'
+        #      SCHEMA_REGISTRY_LISTENERS: 'https://localhost:8181'
+        #      SCHEMA_REGISTRY_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: " "
+        #        # SCHEMA_REGISTRY_LISTENERS: 'http://localhost:8081,https://localhost:8181'
+        #      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
+        #        # works if the broker advertize on port SSL://broker:9093
+        #      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'SSL://broker:9093' 
+        #      SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: SSL
+        #      SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_LOCATION: /etc/schema-registry/secrets/schema-registry.keystore.jks
+        #      SCHEMA_REGISTRY_SSL_KEYSTORE_LOCATION: /etc/schema-registry/secrets/schema-registry.keystore.jks
+        #      SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_PASSWORD: datahub
+        #      SCHEMA_REGISTRY_SSL_KEYSTORE_PASSWORD: datahub
+        #      SCHEMA_REGISTRY_KAFKASTORE_SSL_KEY_PASSWORD: datahub
+        #      SCHEMA_REGISTRY_SSL_KEY_PASSWORD: datahub
+        #      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_LOCATION: /etc/schema-registry/secrets/schema-registry.truststore.jks
+        #      SCHEMA_REGISTRY_SSL_TRUSTSTORE_LOCATION: /etc/schema-registry/secrets/schema-registry.truststore.jks
+        #      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_PASSWORD: datahub
+        #      SCHEMA_REGISTRY_SSL_TRUSTSTORE_PASSWORD: datahub
+        #      SCHEMA_REGISTRY_SCHEMA_REGISTRY_INTER_INSTANCE_PROTOCOL: https
+        #        # SCHEMA_REGISTRY_SCHEMA_REGISTRY_INTER_INSTANCE_PROTOCOL: http
+        #      SCHEMA_REGISTRY_KAFKASTORE_TOPIC: _schemas
+        #      SCHEMA_REGISTRY_SSL_CLIENT_AUTH: 'true'
+        #    depends_on:
+        #      - broker
+        #      #  kafka-ssl:
+        #      #    condition: service_healthy
+        #    volumes:
+        #      - ./secrets:/etc/schema-registry/secrets
+        #    networks:
+        #      - kafka-network
+
+
+

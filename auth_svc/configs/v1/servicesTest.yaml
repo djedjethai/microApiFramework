@@ -1,0 +1,20 @@
+frontend:
+  id: "222222"
+  secret: "22222222"
+  domain: "http://localhost:80"
+
+order:
+  id: "order"
+  secret: "orderSecret"
+  domain: "http://localhost:50001"
+
+broker_svc:
+  id: "brokerSvc"
+  secret: "brokerSvcSecret"
+  domain: "http://localhost:8080"  
+
+registry_svc:
+  id: "registrySvc"
+  secret: "registrySvcSecret"
+  domain: "http://localhost:4000"
+
